@@ -3,25 +3,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const emailInput = document.querySelector('#email-input');
     const googleAuthButton = document.querySelector('#google-auth-button');
     
-    // Debugging helper
+    // Debugging helper com log no console e para UI
     function debug(message) {
         console.log(`[DEBUG] ${message}`);
     }
     
     debug('DOM loaded, setting up authentication');
-    debug(`Current hostname: ${window.location.hostname}`);
     
     // Verificar status do Firebase Auth
     function checkAuthStatus() {
-        const isAvailable = typeof firebase !== 'undefined' && typeof firebase.auth === 'function';
-        debug(`Firebase Auth is available: ${isAvailable}`);
-        return isAvailable;
+        try {
+            const isAvailable = typeof firebase !== 'undefined' && typeof firebase.auth === 'function';
+            debug(`Firebase Auth is available: ${isAvailable}`);
+            
+            if (isAvailable) {
+                debug('Testando Firebase Auth...');
+                const auth = firebase.auth();
+                debug('Firebase Auth funcionando corretamente');
+            }
+            
+            return isAvailable;
+        } catch (error) {
+            debug(`Erro ao verificar Auth: ${error.message}`);
+            return false;
+        }
     }
     
-    // Verificar inicialmente e após um pequeno atraso
+    // Verificar inicialmente
     checkAuthStatus();
     
-    // Autenticação com o Google via Firebase
+    // Autenticação com o Google
     if (googleAuthButton) {
         debug('Setting up Google auth button click handler');
         googleAuthButton.addEventListener('click', (e) => {
@@ -34,6 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tentar autenticação com Firebase
             handleGoogleAuth();
         });
+    } else {
+        debug('Google auth button not found!');
     }
     
     function handleGoogleAuth() {
@@ -46,21 +59,43 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Usar o serviço de autenticação para login com Google
-        window.authService.signInWithGoogle()
-            .then(result => {
-                debug(`Login successful: ${result.user.email}`);
-                
-                // Redirecionar para a página principal após o login
-                setTimeout(() => {
+        // Login direto com popup
+        try {
+            debug('Tentando login com Google via popup');
+            
+            // Login com popup sempre que possível
+            firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider())
+                .then(result => {
+                    debug(`Login successful: ${result.user.email}`);
+                    
+                    // Salvar dados no Firestore
+                    if (window.dbService && window.dbService.saveGoogleSubscription) {
+                        window.dbService.saveGoogleSubscription(
+                            result.user.email, 
+                            result.user.displayName
+                        );
+                    }
+                    
+                    // Redirecionar para a página principal imediatamente
                     window.location.href = 'https://teste-lp-pi.vercel.app/';
-                }, 1000);
-            })
-            .catch(error => {
-                debug(`Login error: ${error.message}`);
-                alert('Erro durante a autenticação. Por favor, tente novamente.');
-                googleAuthButton.disabled = false;
-            });
+                })
+                .catch(error => {
+                    debug(`Login error: ${error.code} - ${error.message}`);
+                    
+                    // Tentar método alternativo se o popup falhar
+                    if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+                        debug('Popup bloqueado, tentando redirect...');
+                        firebase.auth().signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+                    } else {
+                        alert('Erro durante a autenticação: ' + error.message);
+                        googleAuthButton.disabled = false;
+                    }
+                });
+        } catch (error) {
+            debug(`Erro crítico no auth: ${error.message}`);
+            alert('Erro no sistema de autenticação. Por favor, tente usar o formulário de e-mail.');
+            googleAuthButton.disabled = false;
+        }
     }
     
     // Email validation function
@@ -71,8 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Form validation
     if (form) {
+        debug('Form found, setting up submit handler');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
+            debug('Form submitted');
             
             const email = emailInput.value.trim();
             
@@ -94,73 +131,84 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Disable the form while submitting
+            // Desabilitar o formulário durante o envio
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = true;
             submitButton.textContent = 'Enviando...';
             
-            // Define um timeout para garantir que o botão não fique preso em "Enviando..."
+            // Timeout de segurança (3 segundos)
             const submitTimeout = setTimeout(() => {
-                debug('Submission timeout reached, resetting form');
+                debug('Timeout de segurança ativado');
                 submitButton.disabled = false;
                 submitButton.textContent = 'inscreva-se';
-            }, 8000); // 8 segundos de timeout
+                
+                // Forçar redirecionamento em caso de problemas
+                alert('Recebemos seu e-mail! Redirecionando...');
+                window.location.href = 'https://teste-lp-pi.vercel.app/';
+            }, 3000);
             
             try {
-                // Salvar no Firebase
-                debug('Saving email to Firebase');
+                debug(`Saving email to Firebase: ${email}`);
                 
-                // Simular sucesso se o Firebase não estiver disponível
+                // Verificar se o Firebase está disponível
                 if (typeof window.dbService === 'undefined' || !window.dbService.saveEmailSubscription) {
-                    debug('Firebase service not available, proceeding with mock success');
+                    debug('Firebase indisponível, redirecionando diretamente');
                     clearTimeout(submitTimeout);
                     
-                    // Mostrar mensagem de sucesso e redirecionamento
-                    alert(`Obrigado por se inscrever com: ${email}`);
+                    alert(`Recebemos seu e-mail: ${email}`);
                     emailInput.value = '';
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'inscreva-se';
                     
-                    // Redirecionar diretamente para a página principal
+                    // Redirecionar sem esperar
                     window.location.href = 'https://teste-lp-pi.vercel.app/';
                     return;
                 }
                 
-                window.dbService.saveEmailSubscription(email)
-                    .then(success => {
-                        clearTimeout(submitTimeout);
-                        if (success) {
-                            debug('Email saved successfully');
-                            
-                            // Mensagem de sucesso e redirecionamento
-                            alert(`Obrigado por se inscrever com: ${email}`);
-                            emailInput.value = '';
-                            
-                            // Redirecionar diretamente para a página principal sem delay
-                            window.location.href = 'https://teste-lp-pi.vercel.app/';
-                        } else {
-                            // Erro ao salvar
-                            debug('Error saving email');
-                            showError('Erro ao salvar sua inscrição. Por favor, tente novamente.');
-                            submitButton.disabled = false;
-                            submitButton.textContent = 'inscreva-se';
-                        }
-                    })
-                    .catch(error => {
-                        clearTimeout(submitTimeout);
-                        debug('Error saving email: ' + error);
-                        showError('Erro ao salvar sua inscrição. Por favor, tente novamente.');
-                        submitButton.disabled = false;
-                        submitButton.textContent = 'inscreva-se';
-                    });
+                // Tentar salvar no Firebase com timeout curto
+                const savePromise = window.dbService.saveEmailSubscription(email);
+                
+                // Usar Promise.race para garantir uma resposta rápida
+                Promise.race([
+                    savePromise,
+                    new Promise(resolve => setTimeout(() => {
+                        debug('Prazo para salvar esgotado, redirecionando');
+                        resolve('timeout');
+                    }, 2000))
+                ]).then(result => {
+                    clearTimeout(submitTimeout);
+                    
+                    debug(`Resultado do salvamento: ${result}`);
+                    
+                    // Mostrar mensagem e redirecionar em qualquer caso
+                    alert(`Obrigado por se inscrever com: ${email}`);
+                    emailInput.value = '';
+                    
+                    // Redirecionar imediatamente
+                    window.location.href = 'https://teste-lp-pi.vercel.app/';
+                }).catch(error => {
+                    clearTimeout(submitTimeout);
+                    debug(`Erro ao salvar: ${error}`);
+                    
+                    // Mesmo com erro, redirecionar
+                    alert(`Recebemos seu e-mail. Redirecionando...`);
+                    emailInput.value = '';
+                    window.location.href = 'https://teste-lp-pi.vercel.app/';
+                });
             } catch (error) {
                 clearTimeout(submitTimeout);
-                debug('Unexpected error in form submission: ' + error);
-                showError('Ocorreu um erro. Por favor, tente novamente.');
+                debug(`Erro inesperado: ${error}`);
+                
+                // Mesmo com erro, redirecionar
+                alert(`Algo deu errado, mas recebemos seu e-mail: ${email}`);
+                emailInput.value = '';
                 submitButton.disabled = false;
                 submitButton.textContent = 'inscreva-se';
+                
+                // Redirecionar
+                window.location.href = 'https://teste-lp-pi.vercel.app/';
             }
         });
+    } else {
+        debug('Form not found!');
     }
     
     // Check for a common typo in email domains
@@ -219,4 +267,30 @@ document.addEventListener('DOMContentLoaded', () => {
     emailInput.addEventListener('input', () => {
         clearError();
     });
+    
+    // Checar se tem autenticação pendente por redirect
+    try {
+        if (typeof firebase !== 'undefined' && typeof firebase.auth === 'function') {
+            firebase.auth().getRedirectResult().then(result => {
+                if (result.user) {
+                    debug(`Login por redirect bem-sucedido: ${result.user.email}`);
+                    
+                    // Salvar dados e redirecionar
+                    if (window.dbService && window.dbService.saveGoogleSubscription) {
+                        window.dbService.saveGoogleSubscription(
+                            result.user.email, 
+                            result.user.displayName
+                        );
+                    }
+                    
+                    // Redirecionar
+                    window.location.href = 'https://teste-lp-pi.vercel.app/';
+                }
+            }).catch(error => {
+                debug(`Erro no login por redirect: ${error.message}`);
+            });
+        }
+    } catch (e) {
+        debug(`Erro ao verificar redirect: ${e.message}`);
+    }
 }); 

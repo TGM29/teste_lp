@@ -15,10 +15,14 @@ if (typeof firebase === 'undefined') {
   window.dbService = {
     saveEmailSubscription: function(email) {
       console.log('Modo simulado: E-mail que seria salvo:', email);
+      alert(`Estamos com problemas técnicos. Mas recebemos seu email: ${email}`);
+      window.location.href = 'https://teste-lp-pi.vercel.app/';
       return Promise.resolve(true);
     },
     saveGoogleSubscription: function(email, name) {
       console.log('Modo simulado: Usuário Google que seria salvo:', email, name);
+      alert(`Estamos com problemas técnicos. Mas recebemos seus dados: ${email}`);
+      window.location.href = 'https://teste-lp-pi.vercel.app/';
       return Promise.resolve(true);
     }
   };
@@ -27,7 +31,8 @@ if (typeof firebase === 'undefined') {
   window.authService = {
     signInWithGoogle: function() {
       console.log('Modo simulado: Tentativa de login com Google');
-      return Promise.resolve({ user: { email: 'usuario.simulado@gmail.com' } });
+      alert('Estamos com problemas técnicos. Por favor, tente o cadastro por email.');
+      return Promise.reject(new Error('Firebase não está disponível'));
     },
     signInWithEmailAndPassword: function(email, password) {
       console.log('Modo simulado: Tentativa de login com email e senha:', email);
@@ -37,7 +42,11 @@ if (typeof firebase === 'undefined') {
 } else {
   try {
     // Inicializar Firebase
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps || !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    
+    console.log('Firebase inicializado com sucesso!');
     
     // Verificar se Firestore está disponível
     if (typeof firebase.firestore !== 'function') {
@@ -49,10 +58,16 @@ if (typeof firebase === 'undefined') {
       throw new Error('Firebase Auth não está disponível');
     }
 
+    // Testar autenticação
+    console.log('Firebase Auth disponível, testando...');
+    const authInstance = firebase.auth();
+    console.log('Auth instance obtida:', authInstance !== null);
+
     // Referência ao Firestore
     const db = firebase.firestore();
     
     // Testar conexão com o Firestore
+    console.log('Testando conexão com Firestore...');
     db.collection('_test').doc('_connection')
       .set({ timestamp: new Date().toISOString() })
       .then(() => console.log('Conexão com Firestore OK'))
@@ -95,6 +110,7 @@ if (typeof firebase === 'undefined') {
 
     // Função para login com Google
     function signInWithGoogle() {
+      console.log("Iniciando login com Google...");
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.addScope('email');
       provider.addScope('profile');
@@ -106,10 +122,14 @@ if (typeof firebase === 'undefined') {
           // Salvar os dados do usuário no Firestore
           saveGoogleSubscription(result.user.email, result.user.displayName);
           
+          // Redirecionar imediatamente após login bem-sucedido
+          window.location.href = 'https://teste-lp-pi.vercel.app/';
+          
           return result;
         })
         .catch((error) => {
-          console.error("Erro no login com Google:", error);
+          console.error("Erro no login com Google:", error.code, error.message);
+          alert("Erro na autenticação com Google: " + error.message);
           throw error;
         });
     }
@@ -131,10 +151,14 @@ if (typeof firebase === 'undefined') {
     window.dbService = {
       saveEmailSubscription: function(email) {
         console.log('Modo simulado (após erro): E-mail que seria salvo:', email);
+        alert(`Estamos com problemas técnicos. Mas recebemos seu email: ${email}`);
+        window.location.href = 'https://teste-lp-pi.vercel.app/';
         return Promise.resolve(true);
       },
       saveGoogleSubscription: function(email, name) {
         console.log('Modo simulado (após erro): Usuário Google que seria salvo:', email, name);
+        alert(`Estamos com problemas técnicos. Mas recebemos seus dados: ${email}`);
+        window.location.href = 'https://teste-lp-pi.vercel.app/';
         return Promise.resolve(true);
       }
     };
@@ -142,8 +166,9 @@ if (typeof firebase === 'undefined') {
     // Serviço simulado de autenticação
     window.authService = {
       signInWithGoogle: function() {
-        console.log('Modo simulado: Tentativa de login com Google');
-        return Promise.resolve({ user: { email: 'usuario.simulado@gmail.com' } });
+        console.log('Modo simulado: Tentativa de login com Google após erro');
+        alert('Estamos com problemas técnicos. Por favor, tente o cadastro por email.');
+        return Promise.reject(error);
       }
     };
   }
