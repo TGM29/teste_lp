@@ -1,9 +1,9 @@
 // Configuração do Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyDKxuYnYYnMlFxZkF-UqAFZwYxn9y5QGJU",
-  authDomain: "landingpage-29c96.firebaseapp.com",
-  projectId: "landingpage-29c96",
-  storageBucket: "landingpage-29c96.appspot.com",
+  apiKey: "AIzaSyAROjNKhAOy4jKhYd2uzJSNMRpztriw570",
+  authDomain: "landingpage-e3122.firebaseapp.com",
+  projectId: "landingpage-e3122",
+  storageBucket: "landingpage-e3122.appspot.com",
   messagingSenderId: "1095068232112",
   appId: "1:1095068232112:web:ce8607ca2ff5bbe2368e75"
 };
