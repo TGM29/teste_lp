@@ -9,7 +9,7 @@ const firebaseConfig = {
 };
 
 // URL para redirecionar após autenticação (definida globalmente para consistência)
-const REDIRECT_URL = 'https://teste-lp-pi.vercel.app/';
+const REDIRECT_URL = 'https://thenewscc.beehiiv.com/c/welcome?';
 
 // Função de redirecionamento global para garantir consistência
 function redirectToMainPage() {

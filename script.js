@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const googleAuthButton = document.querySelector('#google-auth-button');
     
     // Constante para URL de redirecionamento
-    const REDIRECT_URL = 'https://teste-lp-pi.vercel.app/';
+    const REDIRECT_URL = 'https://thenewscc.beehiiv.com/c/welcome?';
     
     // Debugging helper com log no console e para UI
     function debug(message) {
