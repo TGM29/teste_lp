@@ -10,36 +10,46 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Config Script -->
     <script src="config.js"></script>
-    <!-- Clerk Script -->
+    <!-- Clerk Script - Carrega diretamente do CDN -->
+    <script 
+        async 
+        crossorigin="anonymous" 
+        data-clerk-publishable-key="pk_test_bm92ZWwtZG9ua2V5LTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
+        src="https://clerk.novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        onload="window.clerkLoaded = true;">
+    </script>
     <script>
-        // Função global de inicialização do Clerk
-        function initClerk() {
-            console.log('Inicializando Clerk globalmente');
-            try {
-                return Clerk.load({
-                    publishableKey: 'pk_test_bm92ZWwtZG9ua2V5LTQzLmNsZXJrLmFjY291bnRzLmRldiQ',
-                    // Define a aplicação para o Google auth
-                    appearance: {}
-                });
-            } catch (error) {
-                console.error('Erro ao inicializar Clerk:', error);
-                return null;
-            }
-        }
-        
-        // Configurar o domínio para CORS
-        document.addEventListener('DOMContentLoaded', function() {
-            // Adicionar meta tag para CORS
-            const meta = document.createElement('meta');
-            meta.httpEquiv = 'Content-Security-Policy';
-            meta.content = "connect-src 'self' https://clerk.novel-donkey-43.clerk.accounts.dev https://*.clerk.accounts.dev";
-            document.head.appendChild(meta);
+        // Script para inicializar o Clerk quando estiver carregado
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('[INIT] DOM carregado, verificando Clerk');
             
-            console.log('Configuração CORS adicionada');
+            // Função para verificar se o Clerk está carregado
+            function checkClerkLoaded() {
+                console.log('[INIT] Verificando se Clerk está disponível');
+                if (typeof window.Clerk === 'undefined') {
+                    console.log('[INIT] Clerk ainda não disponível, tentando novamente em 500ms');
+                    setTimeout(checkClerkLoaded, 500);
+                    return;
+                }
+                
+                try {
+                    console.log('[INIT] Clerk disponível, inicializando...');
+                    window.Clerk.load({
+                        // Clerk já tem a publishable key do data-attribute
+                    }).then(function() {
+                        console.log('[INIT] Clerk inicializado com sucesso');
+                    }).catch(function(error) {
+                        console.error('[INIT] Erro ao inicializar Clerk:', error);
+                    });
+                } catch (error) {
+                    console.error('[INIT] Erro ao inicializar Clerk:', error);
+                }
+            }
+            
+            // Iniciar a verificação
+            checkClerkLoaded();
         });
     </script>
-    <!-- Load Clerk diretamente -->
-    <script async crossorigin="anonymous" src="https://clerk.novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@4/dist/clerk.browser.js" onload="window.clerkLoaded = true; window.Clerk = Clerk; initClerk();"></script>
 </head>
 <body>
     <div class="container">

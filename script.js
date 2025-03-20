@@ -10,109 +10,112 @@ document.addEventListener('DOMContentLoaded', () => {
     
     debug('DOM loaded, setting up authentication');
     debug(`Current hostname: ${window.location.hostname}`);
-    debug(`Is production: ${window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'}`);
     
     // Verificar status do Clerk
-    const checkClerkStatus = () => {
+    function checkClerkStatus() {
         debug(`Clerk is available: ${typeof window.Clerk !== 'undefined'}`);
-        debug(`Clerk loaded flag: ${window.clerkLoaded}`);
-        
         if (typeof window.Clerk !== 'undefined') {
-            debug(`Clerk version: ${window.Clerk.version}`);
+            debug('Clerk object found!');
+        } else {
+            debug('Clerk object NOT found!');
         }
-    };
+    }
     
     // Verificar inicialmente e após um pequeno atraso
     checkClerkStatus();
     setTimeout(checkClerkStatus, 1000);
+    setTimeout(checkClerkStatus, 3000);
     
-    // Handle Google authentication button click
+    // Simplificar a autenticação com o Google - Método direto
     if (googleAuthButton) {
         debug('Setting up Google auth button click handler');
         googleAuthButton.addEventListener('click', (e) => {
-            debug('Google auth button clicked');
             e.preventDefault();
-            handleGoogleAuth();
+            debug('Google auth button clicked');
+            
+            // Tentar abrir a autenticação com o Google via Clerk
+            tryGoogleAuth();
         });
     }
     
-    function handleGoogleAuth() {
-        debug('Handling Google auth with Clerk');
-        try {
-            // Verificar se o Clerk está disponível
-            if (typeof window.Clerk === 'undefined') {
-                debug('Clerk not available, waiting 1000ms...');
-                
-                // Tentar novamente após um curto atraso
-                setTimeout(() => {
-                    if (typeof window.Clerk === 'undefined') {
-                        debug('Clerk still not available after waiting');
-                        
-                        // Tentar recarregar o script do Clerk
-                        debug('Tentando recarregar o script do Clerk');
-                        const script = document.createElement('script');
-                        script.src = 'https://clerk.novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@4/dist/clerk.browser.js';
-                        script.async = true;
-                        script.crossOrigin = 'anonymous';
-                        script.onload = () => {
-                            window.clerkLoaded = true;
-                            if (typeof Clerk !== 'undefined') {
-                                window.Clerk = Clerk;
-                                initClerk();
-                                setTimeout(performGoogleAuth, 500);
-                            } else {
-                                alert('Erro ao carregar Clerk. Por favor, recarregue a página.');
-                            }
-                        };
-                        document.head.appendChild(script);
-                        return;
-                    }
-                    
-                    performGoogleAuth();
-                }, 1000);
-                return;
-            }
-            
-            performGoogleAuth();
-        } catch (error) {
-            console.error('Error with Clerk authentication:', error);
-            alert('Erro ao autenticar com Google. Por favor, tente novamente.');
-        }
-    }
-    
-    function performGoogleAuth() {
-        debug('Performing Google auth with Clerk');
+    function tryGoogleAuth() {
+        debug('Trying Google auth');
         
-        // Caso o Clerk tenha sido inicializado através do initClerk()
-        if (window.Clerk) {
-            debug(`Redirecting to: ${window.clerkConfig.redirectUrl}`);
+        // Determinar o URL de redirecionamento baseado no ambiente
+        const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+        const redirectUrl = isProduction ? `https://${window.location.hostname}` : 'http://localhost:3001';
+        
+        debug(`Redirect URL: ${redirectUrl}`);
+        
+        // Verificar se o Clerk está disponível
+        if (typeof window.Clerk !== 'undefined') {
+            debug('Using Clerk for authentication');
             
             try {
+                // Abrir a tela de login do Google
                 window.Clerk.openSignIn({
-                    redirectUrl: window.clerkConfig.redirectUrl,
-                    appearance: {
-                        elements: {
-                            rootBox: {
-                                boxShadow: 'none',
-                                width: '100%',
-                            }
-                        }
-                    }
+                    redirectUrl: redirectUrl
                 });
             } catch (error) {
                 console.error('Clerk openSignIn error:', error);
-                alert('Erro durante autenticação. Por favor, tente novamente.');
+                // Fallback para URL direta de autenticação
+                useDirectGoogleAuth();
             }
         } else {
-            debug('Clerk object not found even after waiting');
-            alert('Erro ao inicializar autenticação. Por favor, tente novamente.');
+            debug('Clerk not available, using direct approach');
+            useDirectGoogleAuth();
         }
+    }
+    
+    // Método alternativo direto para o OAuth do Google com Clerk
+    function useDirectGoogleAuth() {
+        debug('Using direct Google auth URL');
+        
+        // URL direto para o endpoint de autenticação do Clerk para Google
+        const clerkDomain = 'https://clerk.novel-donkey-43.clerk.accounts.dev';
+        const directAuthUrl = `${clerkDomain}/oauth/google?redirect_url=${encodeURIComponent(window.location.href)}`;
+        
+        debug(`Redirecting to: ${directAuthUrl}`);
+        
+        // Redirecionar para a URL de autenticação do Google
+        window.location.href = directAuthUrl;
     }
     
     // Email validation function
     function isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(email);
+    }
+    
+    // Form validation
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                showError('Por favor, insira seu e-mail.');
+                return;
+            }
+            
+            if (!isValidEmail(email)) {
+                showError('Por favor, insira um e-mail válido.');
+                return;
+            }
+            
+            if (hasCommonTypo(email)) {
+                const suggestion = suggestCorrection(email);
+                if (suggestion) {
+                    showError(`Você quis dizer ${suggestion}?`);
+                    return;
+                }
+            }
+            
+            // Submit the form - in a real implementation, you would send this to your server
+            alert(`Obrigado por se inscrever com: ${email}`);
+            emailInput.value = '';
+        });
     }
     
     // Check for a common typo in email domains
@@ -171,34 +174,4 @@ document.addEventListener('DOMContentLoaded', () => {
     emailInput.addEventListener('input', () => {
         clearError();
     });
-    
-    if (form) {
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const email = emailInput.value.trim();
-            
-            if (!email) {
-                showError('Por favor, insira seu e-mail.');
-                return;
-            }
-            
-            if (!isValidEmail(email)) {
-                showError('Por favor, insira um e-mail válido.');
-                return;
-            }
-            
-            if (hasCommonTypo(email)) {
-                const suggestion = suggestCorrection(email);
-                if (suggestion) {
-                    showError(`Você quis dizer ${suggestion}?`);
-                    return;
-                }
-            }
-            
-            // Submit the form - in a real implementation, you would send this to your server
-            alert(`Obrigado por se inscrever com: ${email}`);
-            emailInput.value = '';
-        });
-    }
 }); 
