@@ -41,44 +41,33 @@ document.addEventListener('DOMContentLoaded', () => {
     function tryGoogleAuth() {
         debug('Trying Google auth');
         
-        // Determinar o URL de redirecionamento baseado no ambiente
-        const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-        const redirectUrl = isProduction ? `https://${window.location.hostname}` : 'http://localhost:3001';
+        // Usar a configuração do arquivo config.js
+        const redirectUrl = window.googleAuth.redirectUrl;
         
-        debug(`Redirect URL: ${redirectUrl}`);
+        debug(`Current URL: ${redirectUrl}`);
         
-        // Verificar se o Clerk está disponível
-        if (typeof window.Clerk !== 'undefined') {
-            debug('Using Clerk for authentication');
-            
-            try {
-                // Abrir a tela de login do Google
-                window.Clerk.openSignIn({
-                    redirectUrl: redirectUrl
-                });
-            } catch (error) {
-                console.error('Clerk openSignIn error:', error);
-                // Fallback para URL direta de autenticação
-                useDirectGoogleAuth();
-            }
-        } else {
-            debug('Clerk not available, using direct approach');
-            useDirectGoogleAuth();
-        }
+        // Redirecionar para autenticação do Google
+        redirectToGoogleAuth(redirectUrl);
     }
     
-    // Método alternativo direto para o OAuth do Google com Clerk
-    function useDirectGoogleAuth() {
-        debug('Using direct Google auth URL');
+    function redirectToGoogleAuth(redirectUrl) {
+        debug('Redirecting directly to Google OAuth');
         
-        // URL direto para o endpoint de autenticação do Clerk para Google
-        const clerkDomain = 'https://clerk.novel-donkey-43.clerk.accounts.dev';
-        const directAuthUrl = `${clerkDomain}/oauth/google?redirect_url=${encodeURIComponent(window.location.href)}`;
+        // Usar dados da configuração
+        const clientId = window.googleAuth.clientId;
+        const scope = window.googleAuth.scopes;
         
-        debug(`Redirecting to: ${directAuthUrl}`);
+        // Construir URL de autenticação do Google
+        const googleAuthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+            `client_id=${clientId}&` +
+            `redirect_uri=${encodeURIComponent(redirectUrl)}&` +
+            'response_type=code&' +
+            `scope=${encodeURIComponent(scope)}`;
         
-        // Redirecionar para a URL de autenticação do Google
-        window.location.href = directAuthUrl;
+        debug(`Redirecting to Google auth: ${googleAuthUrl}`);
+        
+        // Redirecionar para autenticação do Google
+        window.location.href = googleAuthUrl;
     }
     
     // Email validation function
