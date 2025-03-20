@@ -41,6 +41,9 @@ if (typeof firebase === 'undefined') {
   };
 } else {
   try {
+    // Adicionar debug para verificar configuração
+    console.log('Iniciando Firebase com config:', JSON.stringify(firebaseConfig));
+    
     // Inicializar Firebase
     if (!firebase.apps || !firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);

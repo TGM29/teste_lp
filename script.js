@@ -52,44 +52,27 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleGoogleAuth() {
         debug('Handling auth with Firebase');
         
-        if (!checkAuthStatus()) {
-            debug('Firebase Auth not available, showing error');
-            alert('Serviço de autenticação não disponível. Por favor, recarregue a página e tente novamente.');
+        // Verificar se temos o serviço de autenticação disponível
+        if (!window.authService || typeof window.authService.signInWithGoogle !== 'function') {
+            debug('Auth service not available, using fallback');
+            alert('Serviço de autenticação não disponível. Por favor, use o cadastro por email.');
             googleAuthButton.disabled = false;
             return;
         }
         
-        // Login direto com popup
         try {
-            debug('Tentando login com Google via popup');
+            debug('Usando authService.signInWithGoogle()');
             
-            // Login com popup sempre que possível
-            firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider())
+            // Usar o serviço de autenticação configurado em firebase-config.js
+            window.authService.signInWithGoogle()
                 .then(result => {
                     debug(`Login successful: ${result.user.email}`);
-                    
-                    // Salvar dados no Firestore
-                    if (window.dbService && window.dbService.saveGoogleSubscription) {
-                        window.dbService.saveGoogleSubscription(
-                            result.user.email, 
-                            result.user.displayName
-                        );
-                    }
-                    
-                    // Redirecionar para a página principal imediatamente
-                    window.location.href = 'https://teste-lp-pi.vercel.app/';
+                    // Redirecionamento é tratado pelo próprio serviço
                 })
                 .catch(error => {
-                    debug(`Login error: ${error.code} - ${error.message}`);
-                    
-                    // Tentar método alternativo se o popup falhar
-                    if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-                        debug('Popup bloqueado, tentando redirect...');
-                        firebase.auth().signInWithRedirect(new firebase.auth.GoogleAuthProvider());
-                    } else {
-                        alert('Erro durante a autenticação: ' + error.message);
-                        googleAuthButton.disabled = false;
-                    }
+                    debug(`Login error: ${error.message}`);
+                    // Mensagem de erro já é mostrada pelo serviço
+                    googleAuthButton.disabled = false;
                 });
         } catch (error) {
             debug(`Erro crítico no auth: ${error.message}`);
@@ -267,30 +250,4 @@ document.addEventListener('DOMContentLoaded', () => {
     emailInput.addEventListener('input', () => {
         clearError();
     });
-    
-    // Checar se tem autenticação pendente por redirect
-    try {
-        if (typeof firebase !== 'undefined' && typeof firebase.auth === 'function') {
-            firebase.auth().getRedirectResult().then(result => {
-                if (result.user) {
-                    debug(`Login por redirect bem-sucedido: ${result.user.email}`);
-                    
-                    // Salvar dados e redirecionar
-                    if (window.dbService && window.dbService.saveGoogleSubscription) {
-                        window.dbService.saveGoogleSubscription(
-                            result.user.email, 
-                            result.user.displayName
-                        );
-                    }
-                    
-                    // Redirecionar
-                    window.location.href = 'https://teste-lp-pi.vercel.app/';
-                }
-            }).catch(error => {
-                debug(`Erro no login por redirect: ${error.message}`);
-            });
-        }
-    } catch (e) {
-        debug(`Erro ao verificar redirect: ${e.message}`);
-    }
 }); 
