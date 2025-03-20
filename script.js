@@ -2,61 +2,59 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.querySelector('#email-form');
     const emailInput = document.querySelector('#email-input');
     const googleAuthButton = document.querySelector('#google-auth-button');
-    const appleAuthButton = document.querySelector('#apple-auth-button');
     
     // Debugging helper
     function debug(message) {
-        console.log(message);
+        console.log(`[DEBUG] ${message}`);
     }
     
     debug('DOM loaded, setting up authentication');
     
-    // Check that buttons exist
+    // Check that Google button exists and Clerk is loaded
     debug(`Google button found: ${googleAuthButton !== null}`);
-    debug(`Apple button found: ${appleAuthButton !== null}`);
+    debug(`Clerk is available: ${typeof window.Clerk !== 'undefined'}`);
+    debug(`Config is available: ${typeof window.clerkConfig !== 'undefined'}`);
     
     // Handle Google authentication button click
     if (googleAuthButton) {
         debug('Setting up Google auth button click handler');
-        googleAuthButton.onclick = (e) => {
-            debug('Google auth button clicked (onclick)');
-            e.preventDefault();
-            handleGoogleAuth();
-        };
-        
         googleAuthButton.addEventListener('click', (e) => {
-            debug('Google auth button clicked (addEventListener)');
+            debug('Google auth button clicked');
             e.preventDefault();
             handleGoogleAuth();
-        });
-    }
-    
-    // Handle Apple authentication button click
-    if (appleAuthButton) {
-        debug('Setting up Apple auth button click handler');
-        appleAuthButton.onclick = (e) => {
-            debug('Apple auth button clicked (onclick)');
-            e.preventDefault();
-            handleAppleAuth();
-        };
-        
-        appleAuthButton.addEventListener('click', (e) => {
-            debug('Apple auth button clicked (addEventListener)');
-            e.preventDefault();
-            handleAppleAuth();
         });
     }
     
     function handleGoogleAuth() {
-        debug('Handling Google auth');
-        // Navigate to a non-existent page to trigger 404
-        window.location.href = '/non-existent-page-google';
-    }
-    
-    function handleAppleAuth() {
-        debug('Handling Apple auth');
-        // Navigate to a non-existent page to trigger 404
-        window.location.href = '/non-existent-page-apple';
+        debug('Handling Google auth with Clerk');
+        try {
+            if (!window.Clerk) {
+                debug('Clerk is not available. Make sure it is properly loaded.');
+                alert('Erro de inicialização. Por favor, recarregue a página.');
+                return;
+            }
+            
+            debug('Opening Clerk sign-in with Google');
+            // Use Clerk's OAuth with Google
+            window.Clerk.openSignIn({
+                appearance: {
+                    elements: {
+                        rootBox: {
+                            boxShadow: 'none',
+                            width: '100%',
+                        }
+                    }
+                },
+                signInUrl: window.clerkConfig.redirectUrl,
+                afterSignInUrl: window.clerkConfig.redirectUrl,
+                initialValues: {
+                    strategy: 'oauth_google'
+                }
+            });
+        } catch (error) {
+            console.error('Error with Clerk authentication:', error);
+            alert('Erro ao autenticar com Google. Por favor, tente novamente.');
+        }
     }
     
     // Email validation function

@@ -1,9 +1,24 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const url = require('url');
 
 const server = http.createServer((req, res) => {
-    let filePath = '.' + req.url;
+    // Parse the URL
+    const parsedUrl = url.parse(req.url, true);
+    let filePath = '.' + parsedUrl.pathname;
+    
+    console.log(`Request received: ${req.method} ${parsedUrl.pathname}`);
+    
+    // Handle OAuth callbacks
+    if (parsedUrl.pathname === '/callback' || 
+        parsedUrl.pathname === '/oauth-callback') {
+        console.log('OAuth callback detected, redirecting to home');
+        res.writeHead(302, {
+            'Location': '/'
+        });
+        return res.end();
+    }
     
     // Default to index.html if the path is '/'
     if (filePath === './') {
@@ -49,7 +64,7 @@ const server = http.createServer((req, res) => {
     });
 });
 
-const port = 3000;
+const port = 3001;
 server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}/`);
     console.log('Press Ctrl+C to stop');
