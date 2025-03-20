@@ -11,35 +11,19 @@
     <!-- Config Script -->
     <script src="config.js"></script>
     <!-- Clerk Script -->
-    <script src="https://clerk.novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@4/dist/clerk.browser.js"></script>
     <script>
-        // Adicionar um handler para carregar o Clerk
-        window.clerkLoaded = false;
-        
-        // Initialize Clerk with your publishable key
-        window.addEventListener('DOMContentLoaded', async function () {
-            console.log('DOM Content Loaded - Inicializando Clerk');
-            try {
-                const clerk = window.Clerk.init({
-                    publishableKey: window.clerkConfig.publishableKey,
-                    // Usar URLs de configuração
-                    redirectUrl: window.clerkConfig.redirectUrl
-                });
-                
-                await clerk.load();
-                window.clerkLoaded = true;
-                console.log('Clerk carregado com sucesso');
-                
-                if (clerk.user) {
-                    console.log("Usuário autenticado:", clerk.user.firstName);
-                } else {
-                    console.log("Nenhum usuário autenticado");
-                }
-            } catch (error) {
-                console.error('Erro ao carregar o Clerk:', error);
-            }
-        });
+        // Função global de inicialização do Clerk
+        function initClerk() {
+            console.log('Inicializando Clerk globalmente');
+            return Clerk.load({
+                publishableKey: 'pk_test_bm92ZWwtZG9ua2V5LTQzLmNsZXJrLmFjY291bnRzLmRldiQ',
+                // Define a aplicação para o Google auth
+                appearance: {}
+            });
+        }
     </script>
+    <!-- Load Clerk diretamente -->
+    <script async crossorigin="anonymous" src="https://clerk.novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@4/dist/clerk.browser.js" onload="window.clerkLoaded = true; window.Clerk = Clerk; initClerk();"></script>
 </head>
 <body>
     <div class="container">

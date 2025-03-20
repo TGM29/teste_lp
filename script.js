@@ -10,10 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     debug('DOM loaded, setting up authentication');
     
-    // Check that Google button exists and Clerk is loaded
-    debug(`Google button found: ${googleAuthButton !== null}`);
-    debug(`Clerk is available: ${typeof window.Clerk !== 'undefined'}`);
-    debug(`Config is available: ${typeof window.clerkConfig !== 'undefined'}`);
+    // Verificar status do Clerk
+    const checkClerkStatus = () => {
+        debug(`Clerk is available: ${typeof window.Clerk !== 'undefined'}`);
+        debug(`Clerk loaded flag: ${window.clerkLoaded}`);
+    };
+    
+    // Verificar inicialmente e após um pequeno atraso
+    checkClerkStatus();
+    setTimeout(checkClerkStatus, 1000);
     
     // Handle Google authentication button click
     if (googleAuthButton) {
@@ -28,15 +33,37 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleGoogleAuth() {
         debug('Handling Google auth with Clerk');
         try {
-            if (!window.Clerk) {
-                debug('Clerk is not available. Make sure it is properly loaded.');
-                alert('Erro de inicialização. Por favor, recarregue a página.');
+            // Verificar se o Clerk está disponível
+            if (typeof window.Clerk === 'undefined') {
+                debug('Clerk not available, waiting 500ms...');
+                
+                // Tentar novamente após um curto atraso
+                setTimeout(() => {
+                    if (typeof window.Clerk === 'undefined') {
+                        debug('Clerk still not available after waiting');
+                        alert('Erro de inicialização. Por favor, recarregue a página.');
+                        return;
+                    }
+                    
+                    performGoogleAuth();
+                }, 500);
                 return;
             }
             
-            debug('Opening Clerk sign-in with Google');
-            // Use Clerk's OAuth with Google
+            performGoogleAuth();
+        } catch (error) {
+            console.error('Error with Clerk authentication:', error);
+            alert('Erro ao autenticar com Google. Por favor, tente novamente.');
+        }
+    }
+    
+    function performGoogleAuth() {
+        debug('Performing Google auth with Clerk');
+        
+        // Caso o Clerk tenha sido inicializado através do initClerk()
+        if (window.Clerk) {
             window.Clerk.openSignIn({
+                redirectUrl: window.clerkConfig.redirectUrl,
                 appearance: {
                     elements: {
                         rootBox: {
@@ -44,16 +71,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             width: '100%',
                         }
                     }
-                },
-                signInUrl: window.clerkConfig.redirectUrl,
-                afterSignInUrl: window.clerkConfig.redirectUrl,
-                initialValues: {
-                    strategy: 'oauth_google'
                 }
             });
-        } catch (error) {
-            console.error('Error with Clerk authentication:', error);
-            alert('Erro ao autenticar com Google. Por favor, tente novamente.');
+        } else {
+            debug('Clerk object not found even after waiting');
+            alert('Erro ao inicializar autenticação. Por favor, tente novamente.');
         }
     }
     
