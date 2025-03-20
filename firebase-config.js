@@ -1,11 +1,11 @@
 // Configuração do Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyCpkOXoaEl7Z75f-O1BfCJGJqU2jPZ89r8",
-  authDomain: "thenews-landing.firebaseapp.com",
-  projectId: "thenews-landing",
-  storageBucket: "thenews-landing.appspot.com",
-  messagingSenderId: "485356977028",
-  appId: "1:485356977028:web:72fb4ccb0a6dbc8bd3fc3a"
+  apiKey: "AIzaSyDKxuYnYYnMlFxZkF-UqAFZwYxn9y5QGJU",
+  authDomain: "landingpage-29c96.firebaseapp.com",
+  projectId: "landingpage-29c96",
+  storageBucket: "landingpage-29c96.appspot.com",
+  messagingSenderId: "1095068232112",
+  appId: "1:1095068232112:web:ce8607ca2ff5bbe2368e75"
 };
 
 // Verificar se o Firebase está disponível
