@@ -13,61 +13,74 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Verificar status do Clerk
     function checkClerkStatus() {
-        debug(`Clerk is available: ${typeof window.Clerk !== 'undefined'}`);
-        if (typeof window.Clerk !== 'undefined') {
-            debug('Clerk object found!');
-        } else {
-            debug('Clerk object NOT found!');
-        }
+        const isAvailable = typeof window.Clerk !== 'undefined';
+        debug(`Clerk is available: ${isAvailable}`);
+        return isAvailable;
     }
     
     // Verificar inicialmente e após um pequeno atraso
     checkClerkStatus();
     setTimeout(checkClerkStatus, 1000);
-    setTimeout(checkClerkStatus, 3000);
     
-    // Simplificar a autenticação com o Google - Método direto
+    // Autenticação com o Google via Clerk
     if (googleAuthButton) {
         debug('Setting up Google auth button click handler');
         googleAuthButton.addEventListener('click', (e) => {
             e.preventDefault();
             debug('Google auth button clicked');
             
-            // Tentar abrir a autenticação com o Google via Clerk
-            tryGoogleAuth();
+            // Tentar autenticação com Clerk
+            handleClerkAuth();
         });
     }
     
-    function tryGoogleAuth() {
-        debug('Trying Google auth');
+    function handleClerkAuth() {
+        debug('Handling auth with Clerk');
         
-        // Usar a configuração do arquivo config.js
-        const redirectUrl = window.googleAuth.redirectUrl;
+        if (!checkClerkStatus()) {
+            debug('Clerk not available, retrying in 1s');
+            setTimeout(() => {
+                if (checkClerkStatus()) {
+                    debug('Clerk now available, proceeding with auth');
+                    openClerkSignIn();
+                } else {
+                    debug('Clerk still not available, showing error');
+                    alert('Serviço de autenticação não disponível. Por favor, recarregue a página e tente novamente.');
+                }
+            }, 1000);
+            return;
+        }
         
-        debug(`Current URL: ${redirectUrl}`);
-        
-        // Redirecionar para autenticação do Google
-        redirectToGoogleAuth(redirectUrl);
+        openClerkSignIn();
     }
     
-    function redirectToGoogleAuth(redirectUrl) {
-        debug('Redirecting directly to Google OAuth');
-        
-        // Usar dados da configuração
-        const clientId = window.googleAuth.clientId;
-        const scope = window.googleAuth.scopes;
-        
-        // Construir URL de autenticação do Google
-        const googleAuthUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' +
-            `client_id=${clientId}&` +
-            `redirect_uri=${encodeURIComponent(redirectUrl)}&` +
-            'response_type=code&' +
-            `scope=${encodeURIComponent(scope)}`;
-        
-        debug(`Redirecting to Google auth: ${googleAuthUrl}`);
-        
-        // Redirecionar para autenticação do Google
-        window.location.href = googleAuthUrl;
+    function openClerkSignIn() {
+        try {
+            debug('Opening Clerk sign in with Google');
+            
+            // Obter URL de redirecionamento do config
+            const redirectUrl = window.clerkConfig.redirectUrl;
+            debug(`Using redirect URL: ${redirectUrl}`);
+            
+            // Abrir tela de login usando o Clerk
+            window.Clerk.openSignIn({
+                redirectUrl: redirectUrl,
+                appearance: {
+                    elements: {
+                        rootBox: {
+                            boxShadow: 'none',
+                            width: '100%',
+                        }
+                    }
+                },
+                signInUrl: redirectUrl,
+                afterSignInUrl: redirectUrl
+            });
+        } catch (error) {
+            debug('Error opening Clerk sign in: ' + error.message);
+            console.error('Error opening Clerk sign in:', error);
+            alert('Erro ao abrir tela de autenticação. Por favor, tente novamente.');
+        }
     }
     
     // Email validation function

@@ -10,25 +10,49 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Config Script -->
     <script src="config.js"></script>
+    <!-- Clerk Script (com protocolo https correto) -->
+    <script 
+        async 
+        crossorigin="anonymous" 
+        data-clerk-publishable-key="pk_test_bm92ZWwtZG9ua2V5LTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
+        src="https://novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        onload="window.clerkLoaded = true;">
+    </script>
     <script>
-        // Configuração simplificada
-        window.googleAuth = {
-            clientId: '485356977028-bk2rlvr3fdj8k8vg4nnv4rqs0vlrgp1p.apps.googleusercontent.com'
-        };
-        
-        // Função para verificar o status de login com Google
+        // Script para inicializar o Clerk quando estiver carregado
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[INIT] DOM carregado');
+            console.log('[INIT] DOM carregado, aguardando Clerk');
             
-            // Verificar se há um código de retorno do Google na URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
+            let attempts = 0;
+            const maxAttempts = 5;
             
-            if (code) {
-                console.log('[INIT] Código de autorização do Google detectado:', code);
-                // Aqui você adicionaria código para processar a autenticação com o backend
-                // Por exemplo, enviando o código para seu servidor para trocar por um token
+            function initializeClerk() {
+                if (typeof window.Clerk !== 'undefined') {
+                    try {
+                        console.log('[INIT] Clerk disponível, inicializando...');
+                        window.Clerk.load({
+                            // Não é necessário fornecer a chave, pois está no atributo data
+                        }).then(function() {
+                            console.log('[INIT] Clerk inicializado com sucesso');
+                        }).catch(function(error) {
+                            console.error('[INIT] Erro ao inicializar Clerk:', error);
+                        });
+                    } catch (error) {
+                        console.error('[INIT] Erro ao inicializar Clerk:', error);
+                    }
+                } else {
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        console.log(`[INIT] Clerk ainda não disponível, tentativa ${attempts}/${maxAttempts}`);
+                        setTimeout(initializeClerk, 1000);
+                    } else {
+                        console.error('[INIT] Clerk não disponível após várias tentativas');
+                    }
+                }
             }
+            
+            // Iniciar verificação após um pequeno atraso
+            setTimeout(initializeClerk, 500);
         });
     </script>
 </head>
