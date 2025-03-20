@@ -22,6 +22,18 @@ if (typeof firebase === 'undefined') {
       return Promise.resolve(true);
     }
   };
+  
+  // Serviço simulado de autenticação
+  window.authService = {
+    signInWithGoogle: function() {
+      console.log('Modo simulado: Tentativa de login com Google');
+      return Promise.resolve({ user: { email: 'usuario.simulado@gmail.com' } });
+    },
+    signInWithEmailAndPassword: function(email, password) {
+      console.log('Modo simulado: Tentativa de login com email e senha:', email);
+      return Promise.resolve({ user: { email: email } });
+    }
+  };
 } else {
   try {
     // Inicializar Firebase
@@ -30,6 +42,11 @@ if (typeof firebase === 'undefined') {
     // Verificar se Firestore está disponível
     if (typeof firebase.firestore !== 'function') {
       throw new Error('Firestore não está disponível');
+    }
+
+    // Verificar se Auth está disponível
+    if (typeof firebase.auth !== 'function') {
+      throw new Error('Firebase Auth não está disponível');
     }
 
     // Referência ao Firestore
@@ -76,10 +93,36 @@ if (typeof firebase === 'undefined') {
       });
     }
 
+    // Função para login com Google
+    function signInWithGoogle() {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.addScope('email');
+      provider.addScope('profile');
+      
+      return firebase.auth().signInWithPopup(provider)
+        .then((result) => {
+          console.log("Login com Google bem-sucedido:", result.user.email);
+          
+          // Salvar os dados do usuário no Firestore
+          saveGoogleSubscription(result.user.email, result.user.displayName);
+          
+          return result;
+        })
+        .catch((error) => {
+          console.error("Erro no login com Google:", error);
+          throw error;
+        });
+    }
+
     // Exportar funções
     window.dbService = {
       saveEmailSubscription,
       saveGoogleSubscription
+    };
+    
+    // Exportar serviço de autenticação
+    window.authService = {
+      signInWithGoogle
     };
     
   } catch (error) {
@@ -93,6 +136,14 @@ if (typeof firebase === 'undefined') {
       saveGoogleSubscription: function(email, name) {
         console.log('Modo simulado (após erro): Usuário Google que seria salvo:', email, name);
         return Promise.resolve(true);
+      }
+    };
+    
+    // Serviço simulado de autenticação
+    window.authService = {
+      signInWithGoogle: function() {
+        console.log('Modo simulado: Tentativa de login com Google');
+        return Promise.resolve({ user: { email: 'usuario.simulado@gmail.com' } });
       }
     };
   }

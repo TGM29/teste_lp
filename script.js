@@ -11,112 +11,56 @@ document.addEventListener('DOMContentLoaded', () => {
     debug('DOM loaded, setting up authentication');
     debug(`Current hostname: ${window.location.hostname}`);
     
-    // Verificar status do Clerk
-    function checkClerkStatus() {
-        const isAvailable = typeof window.Clerk !== 'undefined';
-        debug(`Clerk is available: ${isAvailable}`);
+    // Verificar status do Firebase Auth
+    function checkAuthStatus() {
+        const isAvailable = typeof firebase !== 'undefined' && typeof firebase.auth === 'function';
+        debug(`Firebase Auth is available: ${isAvailable}`);
         return isAvailable;
     }
     
     // Verificar inicialmente e após um pequeno atraso
-    checkClerkStatus();
-    setTimeout(checkClerkStatus, 1000);
+    checkAuthStatus();
     
-    // Autenticação com o Google via Clerk
+    // Autenticação com o Google via Firebase
     if (googleAuthButton) {
         debug('Setting up Google auth button click handler');
         googleAuthButton.addEventListener('click', (e) => {
             e.preventDefault();
             debug('Google auth button clicked');
             
-            // Tentar autenticação com Clerk
-            handleClerkAuth();
+            // Desabilitar o botão durante a autenticação
+            googleAuthButton.disabled = true;
+            
+            // Tentar autenticação com Firebase
+            handleGoogleAuth();
         });
     }
     
-    function handleClerkAuth() {
-        debug('Handling auth with Clerk');
+    function handleGoogleAuth() {
+        debug('Handling auth with Firebase');
         
-        if (!checkClerkStatus()) {
-            debug('Clerk not available, retrying in 1s');
-            setTimeout(() => {
-                if (checkClerkStatus()) {
-                    debug('Clerk now available, proceeding with auth');
-                    openClerkSignIn();
-                } else {
-                    debug('Clerk still not available, showing error');
-                    alert('Serviço de autenticação não disponível. Por favor, recarregue a página e tente novamente.');
-                }
-            }, 1000);
+        if (!checkAuthStatus()) {
+            debug('Firebase Auth not available, showing error');
+            alert('Serviço de autenticação não disponível. Por favor, recarregue a página e tente novamente.');
+            googleAuthButton.disabled = false;
             return;
         }
         
-        // Verificar se já tem usuário logado e salvar seus dados
-        if (window.Clerk.user) {
-            const user = window.Clerk.user;
-            debug(`User already logged in: ${user.primaryEmailAddress.emailAddress}`);
-            
-            // Salvar dados do usuário logado no Firebase
-            window.dbService.saveGoogleSubscription(
-                user.primaryEmailAddress.emailAddress,
-                user.fullName || ''
-            ).then(success => {
-                if (success) {
-                    debug('Google user saved successfully');
-                }
+        // Usar o serviço de autenticação para login com Google
+        window.authService.signInWithGoogle()
+            .then(result => {
+                debug(`Login successful: ${result.user.email}`);
+                
+                // Redirecionar para a página principal após o login
+                setTimeout(() => {
+                    window.location.href = 'https://teste-lp-pi.vercel.app/';
+                }, 1000);
+            })
+            .catch(error => {
+                debug(`Login error: ${error.message}`);
+                alert('Erro durante a autenticação. Por favor, tente novamente.');
+                googleAuthButton.disabled = false;
             });
-        }
-        
-        openClerkSignIn();
-    }
-    
-    function openClerkSignIn() {
-        try {
-            debug('Opening Clerk sign in with Google');
-            
-            // Adicionar listener para processar usuário após login
-            window.Clerk.addListener(({ user }) => {
-                if (user) {
-                    debug(`User signed in: ${user.primaryEmailAddress.emailAddress}`);
-                    
-                    // Salvar dados do usuário no Firebase
-                    window.dbService.saveGoogleSubscription(
-                        user.primaryEmailAddress.emailAddress,
-                        user.fullName || ''
-                    ).then(success => {
-                        if (success) {
-                            debug('Google user saved successfully after sign-in');
-                        }
-                    });
-                }
-            });
-            
-            // Usar a URL principal como redirecionamento
-            const mainUrl = 'https://teste-lp-pi.vercel.app/';
-            debug(`Using redirect URL: ${mainUrl}`);
-            
-            // Abrir tela de login usando o Clerk
-            window.Clerk.openSignIn({
-                // Usar a URL principal explicitamente
-                redirectUrl: mainUrl,
-                appearance: {
-                    elements: {
-                        rootBox: {
-                            boxShadow: 'none',
-                            width: '100%',
-                        }
-                    }
-                },
-                signInUrl: mainUrl,
-                afterSignInUrl: mainUrl,
-                // Especificar explicitamente o Google como provedor
-                providerId: 'oauth_google'
-            });
-        } catch (error) {
-            debug('Error opening Clerk sign in: ' + error.message);
-            console.error('Error opening Clerk sign in:', error);
-            alert('Erro ao abrir tela de autenticação. Por favor, tente novamente.');
-        }
     }
     
     // Email validation function
@@ -177,11 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     submitButton.disabled = false;
                     submitButton.textContent = 'inscreva-se';
                     
-                    // Redirecionar após um pequeno atraso
-                    setTimeout(() => {
-                        debug('Redirecting to main page after email subscription');
-                        window.location.href = 'https://teste-lp-pi.vercel.app/';
-                    }, 1000);
+                    // Redirecionar diretamente para a página principal
+                    window.location.href = 'https://teste-lp-pi.vercel.app/';
                     return;
                 }
                 
@@ -191,16 +132,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (success) {
                             debug('Email saved successfully');
                             
-                            // Submit the form - in a real implementation, you would send this to your server
-                            // Mostrar mensagem de sucesso e depois redirecionar
+                            // Mensagem de sucesso e redirecionamento
                             alert(`Obrigado por se inscrever com: ${email}`);
                             emailInput.value = '';
                             
-                            // Redirecionar após um pequeno atraso
-                            setTimeout(() => {
-                                debug('Redirecting to main page after email subscription');
-                                window.location.href = 'https://teste-lp-pi.vercel.app/';
-                            }, 1000);
+                            // Redirecionar diretamente para a página principal sem delay
+                            window.location.href = 'https://teste-lp-pi.vercel.app/';
                         } else {
                             // Erro ao salvar
                             debug('Error saving email');

@@ -13,50 +13,33 @@
     <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="firebase-config.js"></script>
-    <!-- Clerk Script (com protocolo https correto) -->
-    <script 
-        async 
-        crossorigin="anonymous" 
-        data-clerk-publishable-key="pk_test_bm92ZWwtZG9ua2V5LTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
-        src="https://novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-        onload="window.clerkLoaded = true;">
-    </script>
     <script>
-        // Script para inicializar o Clerk quando estiver carregado
+        // Script para inicializar a autenticação do Firebase
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[INIT] DOM carregado, aguardando Clerk');
+            console.log('[INIT] DOM carregado, configurando Firebase Auth');
             
-            let attempts = 0;
-            const maxAttempts = 5;
-            
-            function initializeClerk() {
-                if (typeof window.Clerk !== 'undefined') {
-                    try {
-                        console.log('[INIT] Clerk disponível, inicializando...');
-                        window.Clerk.load({
-                            // Não é necessário fornecer a chave, pois está no atributo data
-                        }).then(function() {
-                            console.log('[INIT] Clerk inicializado com sucesso');
-                        }).catch(function(error) {
-                            console.error('[INIT] Erro ao inicializar Clerk:', error);
-                        });
-                    } catch (error) {
-                        console.error('[INIT] Erro ao inicializar Clerk:', error);
-                    }
-                } else {
-                    attempts++;
-                    if (attempts < maxAttempts) {
-                        console.log(`[INIT] Clerk ainda não disponível, tentativa ${attempts}/${maxAttempts}`);
-                        setTimeout(initializeClerk, 1000);
+            // Verificar se o login com Google está pronto para uso
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+                console.log('[INIT] Firebase Auth disponível');
+                
+                // Configurar o provedor do Google
+                window.googleProvider = new firebase.auth.GoogleAuthProvider();
+                window.googleProvider.addScope('email');
+                window.googleProvider.addScope('profile');
+                
+                // Verificar se já tem usuário logado
+                firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        console.log('[AUTH] Usuário já está logado:', user.email);
                     } else {
-                        console.error('[INIT] Clerk não disponível após várias tentativas');
+                        console.log('[AUTH] Nenhum usuário logado');
                     }
-                }
+                });
+            } else {
+                console.error('[INIT] Firebase Auth não está disponível');
             }
-            
-            // Iniciar verificação após um pequeno atraso
-            setTimeout(initializeClerk, 500);
         });
     </script>
 </head>
@@ -90,7 +73,7 @@
                     <span>ou</span>
                 </div>
                 
-                <div class="clerk-auth">
+                <div class="auth">
                     <div class="social-auth-icons">
                         <button id="google-auth-button" class="social-auth-icon" type="button">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" class="auth-icon">
