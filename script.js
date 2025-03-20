@@ -58,13 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             debug('Opening Clerk sign in with Google');
             
-            // Obter URL de redirecionamento do config
-            const redirectUrl = window.clerkConfig.redirectUrl;
-            debug(`Using redirect URL: ${redirectUrl}`);
+            // Usar a URL principal como redirecionamento
+            const mainUrl = 'https://teste-lp-pi.vercel.app/';
+            debug(`Using redirect URL: ${mainUrl}`);
             
             // Abrir tela de login usando o Clerk
             window.Clerk.openSignIn({
-                redirectUrl: redirectUrl,
+                // Usar a URL principal explicitamente
+                redirectUrl: mainUrl,
                 appearance: {
                     elements: {
                         rootBox: {
@@ -73,8 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 },
-                signInUrl: redirectUrl,
-                afterSignInUrl: redirectUrl
+                signInUrl: mainUrl,
+                afterSignInUrl: mainUrl,
+                // Especificar explicitamente o Google como provedor
+                providerId: 'oauth_google'
             });
         } catch (error) {
             debug('Error opening Clerk sign in: ' + error.message);
@@ -115,8 +118,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Submit the form - in a real implementation, you would send this to your server
+            // Mostrar mensagem de sucesso e depois redirecionar
             alert(`Obrigado por se inscrever com: ${email}`);
             emailInput.value = '';
+            
+            // Redirecionar após um pequeno atraso
+            setTimeout(() => {
+                debug('Redirecting to main page after email subscription');
+                window.location.href = 'https://teste-lp-pi.vercel.app/';
+            }, 1000);
         });
     }
     
