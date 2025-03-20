@@ -8,6 +8,18 @@ const firebaseConfig = {
   appId: "1:1095068232112:web:ce8607ca2ff5bbe2368e75"
 };
 
+// URL para redirecionar após autenticação (definida globalmente para consistência)
+const REDIRECT_URL = 'https://teste-lp-pi.vercel.app/';
+
+// Função de redirecionamento global para garantir consistência
+function redirectToMainPage() {
+  console.log("Redirecionando para", REDIRECT_URL);
+  // Usando setTimeout para garantir que o redirecionamento ocorra
+  setTimeout(() => {
+    window.location.href = REDIRECT_URL;
+  }, 500);
+}
+
 // Verificar se o Firebase está disponível
 if (typeof firebase === 'undefined') {
   console.error('Firebase não está disponível. Verifique se os scripts foram carregados corretamente.');
@@ -16,13 +28,13 @@ if (typeof firebase === 'undefined') {
     saveEmailSubscription: function(email) {
       console.log('Modo simulado: E-mail que seria salvo:', email);
       alert(`Estamos com problemas técnicos. Mas recebemos seu email: ${email}`);
-      window.location.href = 'https://teste-lp-pi.vercel.app/';
+      redirectToMainPage();
       return Promise.resolve(true);
     },
     saveGoogleSubscription: function(email, name) {
       console.log('Modo simulado: Usuário Google que seria salvo:', email, name);
       alert(`Estamos com problemas técnicos. Mas recebemos seus dados: ${email}`);
-      window.location.href = 'https://teste-lp-pi.vercel.app/';
+      redirectToMainPage();
       return Promise.resolve(true);
     }
   };
@@ -123,10 +135,15 @@ if (typeof firebase === 'undefined') {
           console.log("Login com Google bem-sucedido:", result.user.email);
           
           // Salvar os dados do usuário no Firestore
-          saveGoogleSubscription(result.user.email, result.user.displayName);
-          
-          // Redirecionar imediatamente após login bem-sucedido
-          window.location.href = 'https://teste-lp-pi.vercel.app/';
+          saveGoogleSubscription(result.user.email, result.user.displayName)
+            .then(() => {
+              console.log("Redirecionando após salvar dados do usuário");
+              redirectToMainPage();
+            })
+            .catch(error => {
+              console.error("Erro ao salvar dados, mas prosseguindo com redirecionamento:", error);
+              redirectToMainPage();
+            });
           
           return result;
         })
@@ -148,6 +165,9 @@ if (typeof firebase === 'undefined') {
       signInWithGoogle
     };
     
+    // Exportar função de redirecionamento globalmente
+    window.redirectToMainPage = redirectToMainPage;
+    
   } catch (error) {
     console.error('Erro ao inicializar Firebase:', error);
     // Criar serviços simulados para evitar erros
@@ -155,13 +175,13 @@ if (typeof firebase === 'undefined') {
       saveEmailSubscription: function(email) {
         console.log('Modo simulado (após erro): E-mail que seria salvo:', email);
         alert(`Estamos com problemas técnicos. Mas recebemos seu email: ${email}`);
-        window.location.href = 'https://teste-lp-pi.vercel.app/';
+        redirectToMainPage();
         return Promise.resolve(true);
       },
       saveGoogleSubscription: function(email, name) {
         console.log('Modo simulado (após erro): Usuário Google que seria salvo:', email, name);
         alert(`Estamos com problemas técnicos. Mas recebemos seus dados: ${email}`);
-        window.location.href = 'https://teste-lp-pi.vercel.app/';
+        redirectToMainPage();
         return Promise.resolve(true);
       }
     };

@@ -3,9 +3,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const emailInput = document.querySelector('#email-input');
     const googleAuthButton = document.querySelector('#google-auth-button');
     
+    // Constante para URL de redirecionamento
+    const REDIRECT_URL = 'https://teste-lp-pi.vercel.app/';
+    
     // Debugging helper com log no console e para UI
     function debug(message) {
         console.log(`[DEBUG] ${message}`);
+    }
+    
+    // Função de redirecionamento com fallback
+    function redirectToMainPage() {
+        debug('Redirecionando para: ' + REDIRECT_URL);
+        
+        // Usar a função global se disponível, ou redirecionar diretamente
+        if (window.redirectToMainPage) {
+            window.redirectToMainPage();
+        } else {
+            // Usar setTimeout para garantir que o redirecionamento ocorra
+            setTimeout(() => {
+                window.location.href = REDIRECT_URL;
+            }, 500);
+        }
     }
     
     debug('DOM loaded, setting up authentication');
@@ -42,19 +60,30 @@ document.addEventListener('DOMContentLoaded', () => {
             // Desabilitar o botão durante a autenticação
             googleAuthButton.disabled = true;
             
+            // Definir um timeout de segurança para o botão de Google
+            const buttonTimeout = setTimeout(() => {
+                debug('Google button timeout - redirecionando');
+                googleAuthButton.disabled = false;
+                
+                // Em último caso, redirecionar diretamente
+                alert('Tivemos um problema, mas estamos redirecionando você...');
+                redirectToMainPage();
+            }, 5000);
+            
             // Tentar autenticação com Firebase
-            handleGoogleAuth();
+            handleGoogleAuth(buttonTimeout);
         });
     } else {
         debug('Google auth button not found!');
     }
     
-    function handleGoogleAuth() {
+    function handleGoogleAuth(buttonTimeout) {
         debug('Handling auth with Firebase');
         
         // Verificar se temos o serviço de autenticação disponível
         if (!window.authService || typeof window.authService.signInWithGoogle !== 'function') {
             debug('Auth service not available, using fallback');
+            clearTimeout(buttonTimeout);
             alert('Serviço de autenticação não disponível. Por favor, use o cadastro por email.');
             googleAuthButton.disabled = false;
             return;
@@ -66,15 +95,35 @@ document.addEventListener('DOMContentLoaded', () => {
             // Usar o serviço de autenticação configurado em firebase-config.js
             window.authService.signInWithGoogle()
                 .then(result => {
+                    clearTimeout(buttonTimeout);
                     debug(`Login successful: ${result.user.email}`);
-                    // Redirecionamento é tratado pelo próprio serviço
+                    
+                    // Garantir redirecionamento mesmo que o serviço falhe
+                    debug('Redirecionando após autenticação bem-sucedida');
+                    
+                    // Mostrar mensagem de sucesso
+                    alert('Login com Google realizado com sucesso! Redirecionando...');
+                    
+                    // Redirecionar para a página principal
+                    redirectToMainPage();
                 })
                 .catch(error => {
+                    clearTimeout(buttonTimeout);
                     debug(`Login error: ${error.message}`);
+                    
                     // Mensagem de erro já é mostrada pelo serviço
                     googleAuthButton.disabled = false;
+                    
+                    // Se o erro for relacionado a domínio não autorizado, redirecionar de qualquer forma
+                    if (error.code === 'auth/unauthorized-domain' || 
+                        error.code === 'auth/popup-closed-by-user') {
+                        debug('Erro de domínio não autorizado ou popup fechado, redirecionando mesmo assim');
+                        alert('Quase lá! Estamos redirecionando você...');
+                        redirectToMainPage();
+                    }
                 });
         } catch (error) {
+            clearTimeout(buttonTimeout);
             debug(`Erro crítico no auth: ${error.message}`);
             alert('Erro no sistema de autenticação. Por favor, tente usar o formulário de e-mail.');
             googleAuthButton.disabled = false;
@@ -127,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Forçar redirecionamento em caso de problemas
                 alert('Recebemos seu e-mail! Redirecionando...');
-                window.location.href = 'https://teste-lp-pi.vercel.app/';
+                redirectToMainPage();
             }, 3000);
             
             try {
@@ -142,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     emailInput.value = '';
                     
                     // Redirecionar sem esperar
-                    window.location.href = 'https://teste-lp-pi.vercel.app/';
+                    redirectToMainPage();
                     return;
                 }
                 
@@ -166,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     emailInput.value = '';
                     
                     // Redirecionar imediatamente
-                    window.location.href = 'https://teste-lp-pi.vercel.app/';
+                    redirectToMainPage();
                 }).catch(error => {
                     clearTimeout(submitTimeout);
                     debug(`Erro ao salvar: ${error}`);
@@ -174,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Mesmo com erro, redirecionar
                     alert(`Recebemos seu e-mail. Redirecionando...`);
                     emailInput.value = '';
-                    window.location.href = 'https://teste-lp-pi.vercel.app/';
+                    redirectToMainPage();
                 });
             } catch (error) {
                 clearTimeout(submitTimeout);
@@ -187,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitButton.textContent = 'inscreva-se';
                 
                 // Redirecionar
-                window.location.href = 'https://teste-lp-pi.vercel.app/';
+                redirectToMainPage();
             }
         });
     } else {
