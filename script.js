@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Usar setTimeout para garantir que o redirecionamento ocorra
             setTimeout(() => {
                 window.location.href = REDIRECT_URL;
-            }, 500);
+            }, 300);
         }
     }
     
@@ -57,16 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             debug('Google auth button clicked');
             
-            // Desabilitar o botão durante a autenticação
-            googleAuthButton.disabled = true;
+            // Indicador visual de carregamento (em vez de desabilitar o botão)
+            googleAuthButton.classList.add('loading');
             
             // Definir um timeout de segurança para o botão de Google
             const buttonTimeout = setTimeout(() => {
                 debug('Google button timeout - redirecionando');
-                googleAuthButton.disabled = false;
+                googleAuthButton.classList.remove('loading');
                 
                 // Em último caso, redirecionar diretamente
-                alert('Tivemos um problema, mas estamos redirecionando você...');
                 redirectToMainPage();
             }, 5000);
             
@@ -84,8 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!window.authService || typeof window.authService.signInWithGoogle !== 'function') {
             debug('Auth service not available, using fallback');
             clearTimeout(buttonTimeout);
-            alert('Serviço de autenticação não disponível. Por favor, use o cadastro por email.');
-            googleAuthButton.disabled = false;
+            googleAuthButton.classList.remove('loading');
+            
+            // Redirecionar diretamente em vez de mostrar alerta
+            redirectToMainPage();
             return;
         }
         
@@ -96,37 +97,33 @@ document.addEventListener('DOMContentLoaded', () => {
             window.authService.signInWithGoogle()
                 .then(result => {
                     clearTimeout(buttonTimeout);
-                    debug(`Login successful: ${result.user.email}`);
+                    debug(`Login iniciado: ${JSON.stringify(result)}`);
                     
-                    // Garantir redirecionamento mesmo que o serviço falhe
-                    debug('Redirecionando após autenticação bem-sucedida');
-                    
-                    // Mostrar mensagem de sucesso
-                    alert('Login com Google realizado com sucesso! Redirecionando...');
-                    
-                    // Redirecionar para a página principal
-                    redirectToMainPage();
+                    // Se for um redirecionamento, não precisamos fazer nada
+                    // O Firebase irá lidar com o redirecionamento e o resultado
+                    if (!result || !result.redirect) {
+                        // Se não foi redirecionamento, garantir redirecionamento manual
+                        debug('Redirecionando manualmente após autenticação');
+                        redirectToMainPage();
+                    }
                 })
                 .catch(error => {
                     clearTimeout(buttonTimeout);
                     debug(`Login error: ${error.message}`);
                     
-                    // Mensagem de erro já é mostrada pelo serviço
-                    googleAuthButton.disabled = false;
+                    // Restaurar o botão
+                    googleAuthButton.classList.remove('loading');
                     
-                    // Se o erro for relacionado a domínio não autorizado, redirecionar de qualquer forma
-                    if (error.code === 'auth/unauthorized-domain' || 
-                        error.code === 'auth/popup-closed-by-user') {
-                        debug('Erro de domínio não autorizado ou popup fechado, redirecionando mesmo assim');
-                        alert('Quase lá! Estamos redirecionando você...');
-                        redirectToMainPage();
-                    }
+                    // Redirecionar mesmo em caso de erro
+                    redirectToMainPage();
                 });
         } catch (error) {
             clearTimeout(buttonTimeout);
             debug(`Erro crítico no auth: ${error.message}`);
-            alert('Erro no sistema de autenticação. Por favor, tente usar o formulário de e-mail.');
-            googleAuthButton.disabled = false;
+            googleAuthButton.classList.remove('loading');
+            
+            // Redirecionar em caso de erro crítico
+            redirectToMainPage();
         }
     }
     
@@ -175,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitButton.textContent = 'inscreva-se';
                 
                 // Forçar redirecionamento em caso de problemas
-                alert('Recebemos seu e-mail! Redirecionando...');
                 redirectToMainPage();
             }, 3000);
             
@@ -187,10 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     debug('Firebase indisponível, redirecionando diretamente');
                     clearTimeout(submitTimeout);
                     
-                    alert(`Recebemos seu e-mail: ${email}`);
-                    emailInput.value = '';
-                    
-                    // Redirecionar sem esperar
+                    // Redirecionar sem mostrar alerta
                     redirectToMainPage();
                     return;
                 }
@@ -207,35 +200,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 2000))
                 ]).then(result => {
                     clearTimeout(submitTimeout);
-                    
                     debug(`Resultado do salvamento: ${result}`);
                     
-                    // Mostrar mensagem e redirecionar em qualquer caso
-                    alert(`Obrigado por se inscrever com: ${email}`);
-                    emailInput.value = '';
-                    
-                    // Redirecionar imediatamente
+                    // Redirecionar imediatamente, sem alerta
                     redirectToMainPage();
                 }).catch(error => {
                     clearTimeout(submitTimeout);
                     debug(`Erro ao salvar: ${error}`);
                     
-                    // Mesmo com erro, redirecionar
-                    alert(`Recebemos seu e-mail. Redirecionando...`);
-                    emailInput.value = '';
+                    // Redirecionar sem mostrar alerta
                     redirectToMainPage();
                 });
             } catch (error) {
                 clearTimeout(submitTimeout);
                 debug(`Erro inesperado: ${error}`);
                 
-                // Mesmo com erro, redirecionar
-                alert(`Algo deu errado, mas recebemos seu e-mail: ${email}`);
-                emailInput.value = '';
-                submitButton.disabled = false;
-                submitButton.textContent = 'inscreva-se';
-                
-                // Redirecionar
+                // Redirecionar sem alerta
                 redirectToMainPage();
             }
         });
