@@ -15,12 +15,28 @@
         // Função global de inicialização do Clerk
         function initClerk() {
             console.log('Inicializando Clerk globalmente');
-            return Clerk.load({
-                publishableKey: 'pk_test_bm92ZWwtZG9ua2V5LTQzLmNsZXJrLmFjY291bnRzLmRldiQ',
-                // Define a aplicação para o Google auth
-                appearance: {}
-            });
+            try {
+                return Clerk.load({
+                    publishableKey: 'pk_test_bm92ZWwtZG9ua2V5LTQzLmNsZXJrLmFjY291bnRzLmRldiQ',
+                    // Define a aplicação para o Google auth
+                    appearance: {}
+                });
+            } catch (error) {
+                console.error('Erro ao inicializar Clerk:', error);
+                return null;
+            }
         }
+        
+        // Configurar o domínio para CORS
+        document.addEventListener('DOMContentLoaded', function() {
+            // Adicionar meta tag para CORS
+            const meta = document.createElement('meta');
+            meta.httpEquiv = 'Content-Security-Policy';
+            meta.content = "connect-src 'self' https://clerk.novel-donkey-43.clerk.accounts.dev https://*.clerk.accounts.dev";
+            document.head.appendChild(meta);
+            
+            console.log('Configuração CORS adicionada');
+        });
     </script>
     <!-- Load Clerk diretamente -->
     <script async crossorigin="anonymous" src="https://clerk.novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@4/dist/clerk.browser.js" onload="window.clerkLoaded = true; window.Clerk = Clerk; initClerk();"></script>

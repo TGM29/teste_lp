@@ -9,11 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     debug('DOM loaded, setting up authentication');
+    debug(`Current hostname: ${window.location.hostname}`);
+    debug(`Is production: ${window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'}`);
     
     // Verificar status do Clerk
     const checkClerkStatus = () => {
         debug(`Clerk is available: ${typeof window.Clerk !== 'undefined'}`);
         debug(`Clerk loaded flag: ${window.clerkLoaded}`);
+        
+        if (typeof window.Clerk !== 'undefined') {
+            debug(`Clerk version: ${window.Clerk.version}`);
+        }
     };
     
     // Verificar inicialmente e após um pequeno atraso
@@ -35,18 +41,35 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Verificar se o Clerk está disponível
             if (typeof window.Clerk === 'undefined') {
-                debug('Clerk not available, waiting 500ms...');
+                debug('Clerk not available, waiting 1000ms...');
                 
                 // Tentar novamente após um curto atraso
                 setTimeout(() => {
                     if (typeof window.Clerk === 'undefined') {
                         debug('Clerk still not available after waiting');
-                        alert('Erro de inicialização. Por favor, recarregue a página.');
+                        
+                        // Tentar recarregar o script do Clerk
+                        debug('Tentando recarregar o script do Clerk');
+                        const script = document.createElement('script');
+                        script.src = 'https://clerk.novel-donkey-43.clerk.accounts.dev/npm/@clerk/clerk-js@4/dist/clerk.browser.js';
+                        script.async = true;
+                        script.crossOrigin = 'anonymous';
+                        script.onload = () => {
+                            window.clerkLoaded = true;
+                            if (typeof Clerk !== 'undefined') {
+                                window.Clerk = Clerk;
+                                initClerk();
+                                setTimeout(performGoogleAuth, 500);
+                            } else {
+                                alert('Erro ao carregar Clerk. Por favor, recarregue a página.');
+                            }
+                        };
+                        document.head.appendChild(script);
                         return;
                     }
                     
                     performGoogleAuth();
-                }, 500);
+                }, 1000);
                 return;
             }
             
@@ -62,17 +85,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Caso o Clerk tenha sido inicializado através do initClerk()
         if (window.Clerk) {
-            window.Clerk.openSignIn({
-                redirectUrl: window.clerkConfig.redirectUrl,
-                appearance: {
-                    elements: {
-                        rootBox: {
-                            boxShadow: 'none',
-                            width: '100%',
+            debug(`Redirecting to: ${window.clerkConfig.redirectUrl}`);
+            
+            try {
+                window.Clerk.openSignIn({
+                    redirectUrl: window.clerkConfig.redirectUrl,
+                    appearance: {
+                        elements: {
+                            rootBox: {
+                                boxShadow: 'none',
+                                width: '100%',
+                            }
                         }
                     }
-                }
-            });
+                });
+            } catch (error) {
+                console.error('Clerk openSignIn error:', error);
+                alert('Erro durante autenticação. Por favor, tente novamente.');
+            }
         } else {
             debug('Clerk object not found even after waiting');
             alert('Erro ao inicializar autenticação. Por favor, tente novamente.');
