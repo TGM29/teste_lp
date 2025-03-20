@@ -51,12 +51,45 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // Verificar se já tem usuário logado e salvar seus dados
+        if (window.Clerk.user) {
+            const user = window.Clerk.user;
+            debug(`User already logged in: ${user.primaryEmailAddress.emailAddress}`);
+            
+            // Salvar dados do usuário logado no Firebase
+            window.dbService.saveGoogleSubscription(
+                user.primaryEmailAddress.emailAddress,
+                user.fullName || ''
+            ).then(success => {
+                if (success) {
+                    debug('Google user saved successfully');
+                }
+            });
+        }
+        
         openClerkSignIn();
     }
     
     function openClerkSignIn() {
         try {
             debug('Opening Clerk sign in with Google');
+            
+            // Adicionar listener para processar usuário após login
+            window.Clerk.addListener(({ user }) => {
+                if (user) {
+                    debug(`User signed in: ${user.primaryEmailAddress.emailAddress}`);
+                    
+                    // Salvar dados do usuário no Firebase
+                    window.dbService.saveGoogleSubscription(
+                        user.primaryEmailAddress.emailAddress,
+                        user.fullName || ''
+                    ).then(success => {
+                        if (success) {
+                            debug('Google user saved successfully after sign-in');
+                        }
+                    });
+                }
+            });
             
             // Usar a URL principal como redirecionamento
             const mainUrl = 'https://teste-lp-pi.vercel.app/';
@@ -117,16 +150,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Submit the form - in a real implementation, you would send this to your server
-            // Mostrar mensagem de sucesso e depois redirecionar
-            alert(`Obrigado por se inscrever com: ${email}`);
-            emailInput.value = '';
+            // Disable the form while submitting
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Enviando...';
             
-            // Redirecionar após um pequeno atraso
-            setTimeout(() => {
-                debug('Redirecting to main page after email subscription');
-                window.location.href = 'https://teste-lp-pi.vercel.app/';
-            }, 1000);
+            // Salvar no Firebase
+            debug('Saving email to Firebase');
+            window.dbService.saveEmailSubscription(email)
+                .then(success => {
+                    if (success) {
+                        debug('Email saved successfully');
+                        
+                        // Submit the form - in a real implementation, you would send this to your server
+                        // Mostrar mensagem de sucesso e depois redirecionar
+                        alert(`Obrigado por se inscrever com: ${email}`);
+                        emailInput.value = '';
+                        
+                        // Redirecionar após um pequeno atraso
+                        setTimeout(() => {
+                            debug('Redirecting to main page after email subscription');
+                            window.location.href = 'https://teste-lp-pi.vercel.app/';
+                        }, 1000);
+                    } else {
+                        // Erro ao salvar
+                        debug('Error saving email');
+                        showError('Erro ao salvar sua inscrição. Por favor, tente novamente.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = 'inscreva-se';
+                    }
+                })
+                .catch(error => {
+                    debug('Error saving email: ' + error);
+                    showError('Erro ao salvar sua inscrição. Por favor, tente novamente.');
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'inscreva-se';
+                });
         });
     }
     
